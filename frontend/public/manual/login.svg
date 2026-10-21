@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="280" viewBox="0 0 720 280">
+  <rect width="720" height="280" rx="16" fill="#F5F8FC"/>
+  <rect x="210" y="36" width="300" height="208" rx="16" fill="#ffffff" stroke="#D0D5DD"/>
+  <text x="360" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1D2939">LAMDEPILAR</text>
+  <rect x="240" y="100" width="240" height="32" rx="8" fill="#F9FAFB" stroke="#D0D5DD"/>
+  <rect x="240" y="146" width="240" height="32" rx="8" fill="#F9FAFB" stroke="#D0D5DD"/>
+  <rect x="240" y="192" width="240" height="32" rx="8" fill="#2B7DE0"/>
+  <text x="360" y="213" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#ffffff">Login</text>
+</svg>
