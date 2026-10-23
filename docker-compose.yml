@@ -191,8 +191,9 @@ services:
       context: ./nginx
       dockerfile: ./builder/local/Dockerfile
     container_name: helpdesk_gateway
+    # Host 80/443 sudah dipakai global_nginx_proxy.
     ports:
-      - "80:80"
+      - "81:80"
     restart: unless-stopped
     depends_on:
       frontend-dev:
@@ -202,6 +203,8 @@ services:
     networks:
       - app-bridge
 
+  # Prod tidak menjalankan nginx sendiri: 80/443 milik global_nginx_proxy.
+  # Vhost-nya ada di nginx/gateway/helpdesk-lamdepilar.conf.
   # nginx-prod:
   #   profiles: ["prod"]
   #   build:
@@ -223,9 +226,10 @@ services:
     image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     container_name: helpdesk-minio
     command: server /data --console-address ":9001"
+    # Host 9000/9001 sudah dipakai sharedminio. Port di kanan tetap port dalam container.
     ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "${MINIO_API_PORT:-9010}:9000"
+      - "${MINIO_CONSOLE_PORT:-9011}:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
