@@ -721,6 +721,7 @@ export const userAPI = {
       lastname: string;
       fullname: string | null;
       phone_number: string | null;
+      institution: string | null;
       email_verified_at: string | null;
       created_at: string | null;
       updated_at: string | null;
