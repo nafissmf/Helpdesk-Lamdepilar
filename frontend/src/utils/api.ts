@@ -1594,8 +1594,29 @@ export interface ServiceCategoryItem {
 export interface ServiceManageItem {
   id: number;
   name: string;
+  description?: string | null;
+  group?: "info" | "complaint" | string;
+  sort_order?: number;
+  card_color?: string;
   is_active: boolean;
   categories: ServiceCategoryItem[];
+}
+
+export interface PublicServiceItem {
+  id: number;
+  name: string;
+  description?: string | null;
+  group: "info" | "complaint" | string;
+  sort_order: number;
+  card_color: string;
+  categories: ServiceCategoryItem[];
+}
+
+export interface PublicStats {
+  total: number;
+  open: number;
+  in_progress: number;
+  resolved: number;
 }
 
 export const helpdeskAPI = {
@@ -1665,4 +1686,35 @@ export const helpdeskAPI = {
   getNotifications: () => apiRequest<{ items: AppNotification[] }>("/notifications"),
   markNotificationRead: (id: number) =>
     apiRequest<{ id: number }>(`/notifications/${id}/read`, { method: "POST" }),
+};
+
+export type PublicTicketDetail = TicketDetail & { tracking_code: string };
+
+/** Anonymous catalog / guest ticket APIs (no login required). */
+export const publicHelpdeskAPI = {
+  getConfig: () => apiRequest<HelpdeskConfig>("/public/config"),
+  getServices: (q = "") =>
+    apiRequest<PublicServiceItem[]>(
+      `/public/services${q ? `?q=${encodeURIComponent(q)}` : ""}`
+    ),
+  getCategories: (serviceId: number, q = "") =>
+    apiRequest<{ id: number; name: string; color: string; service_id: number }[]>(
+      `/public/services/${serviceId}/categories${q ? `?q=${encodeURIComponent(q)}` : ""}`
+    ),
+  getArticles: (q = "") =>
+    apiRequest<{ items: ArticleItem[] }>(
+      `/public/articles${q ? `?q=${encodeURIComponent(q)}` : ""}`
+    ),
+  getArticle: (id: number) => apiRequest<ArticleItem>(`/public/articles/${id}`),
+  getManualIndex: () => apiRequest<{ items: ManualItem[] }>("/public/manual"),
+  getManual: (slug: string) => apiRequest<ManualItem>(`/public/manual/${slug}`),
+  getStats: () => apiRequest<PublicStats>("/public/stats"),
+  createTicket: (form: FormData) =>
+    apiRequest<PublicTicketDetail>("/public/tickets", { method: "POST", body: form }),
+  trackTicket: (code: string, email: string) =>
+    apiRequest<PublicTicketDetail>(
+      `/public/tickets/track?code=${encodeURIComponent(code)}&email=${encodeURIComponent(email)}`
+    ),
+  replyTicket: (form: FormData) =>
+    apiRequest<PublicTicketDetail>("/public/tickets/reply", { method: "POST", body: form }),
 };

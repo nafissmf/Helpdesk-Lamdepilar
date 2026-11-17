@@ -148,7 +148,8 @@ services:
       - /app/node_modules # Mencegah konflik node_modules lokal & container (anonymous volume)
       - /app/.vite # Cache Vite untuk performa lebih baik
     ports:
-      - "5300:5173" # Expose port langsung untuk akses langsung ke Vite dev server
+      # Host 5300 sudah dipakai siiubi-terbaru-frontend-dev
+      - "${FRONTEND_DEV_PORT:-5310}:5173"
     environment:
       # PENTING: Memaksa Vite/Chokidar mendeteksi perubahan file di Docker
       - CHOKIDAR_USEPOLLING=true

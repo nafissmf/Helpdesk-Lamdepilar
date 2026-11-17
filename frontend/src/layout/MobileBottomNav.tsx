@@ -18,7 +18,7 @@ const MobileBottomNav: React.FC = () => {
 
   const isActive = (path: string) => {
     if (path === "/dashboard") {
-      return location.pathname === "/" || location.pathname.startsWith("/dashboard");
+      return location.pathname.startsWith("/dashboard");
     }
     if (path === guidesPath) {
       return (

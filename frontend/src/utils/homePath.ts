@@ -18,7 +18,6 @@ export function userHasPermission(
 
 /** Ordered candidates for post-login / fallback navigation. */
 const HOME_CANDIDATES: { path: string; permission: string | string[] }[] = [
-  { path: "/", permission: "view_dashboard" },
   { path: "/dashboard", permission: "view_dashboard" },
   { path: "/tickets", permission: ["view_own_ticket", "view_all_ticket"] },
   { path: "/knowledge-base", permission: ["view_article", "manage_article"] },
@@ -34,13 +33,13 @@ const ROUTE_PERMISSIONS: { prefix: string; permission: string | string[] }[] = [
   { prefix: "/units", permission: "view_unit" },
   { prefix: "/role-scopes", permission: "view_role_scope" },
   { prefix: "/settings", permission: "view_setting" },
+  { prefix: "/services", permission: "manage_service" },
   { prefix: "/tickets", permission: ["view_own_ticket", "view_all_ticket"] },
   { prefix: "/knowledge-base", permission: ["view_article", "manage_article"] },
   { prefix: "/manual", permission: ["view_manual", "manage_manual"] },
   { prefix: "/reports", permission: ["view_own_report", "view_all_report"] },
   { prefix: "/profile", permission: "view_myprofile" },
   { prefix: "/dashboard", permission: "view_dashboard" },
-  { prefix: "/", permission: "view_dashboard" },
 ];
 
 type HasPermission = (permission: string | string[]) => boolean;
@@ -53,9 +52,21 @@ export function getDefaultHomePath(hasPermission: HasPermission): string {
 }
 
 export function canAccessPath(pathname: string, hasPermission: HasPermission): boolean {
-  if (!pathname || pathname === "/signin" || pathname === "/signup") return false;
+  if (
+    !pathname ||
+    pathname === "/signin" ||
+    pathname === "/signup" ||
+    pathname === "/" ||
+    pathname.startsWith("/ajukan") ||
+    pathname.startsWith("/lacak-tiket") ||
+    pathname.startsWith("/pengetahuan") ||
+    pathname.startsWith("/panduan") ||
+    pathname.startsWith("/monitoring")
+  ) {
+    return false;
+  }
   const match = ROUTE_PERMISSIONS.find(
-    (item) => pathname === item.prefix || (item.prefix !== "/" && pathname.startsWith(item.prefix))
+    (item) => pathname === item.prefix || pathname.startsWith(item.prefix)
   );
   if (!match) return false;
   return hasPermission(match.permission);

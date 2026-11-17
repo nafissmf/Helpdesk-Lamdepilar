@@ -56,10 +56,22 @@ def list_services_manage(
 def create_service(
     name: str = Form(...),
     is_active: str = Form("true"),
+    description: str = Form(""),
+    group: str = Form("info"),
+    sort_order: int = Form(0),
+    card_color: str = Form("#2B7DE0"),
     db: Session = Depends(get_db),
     _user: User = Depends(require_permission("manage_service")),
 ):
-    row = svc.create_service(db, name=name, is_active=_parse_bool(is_active))
+    row = svc.create_service(
+        db,
+        name=name,
+        is_active=_parse_bool(is_active),
+        description=description,
+        group=group,
+        sort_order=sort_order,
+        card_color=card_color,
+    )
     return WebResponse(status="success", message="Layanan berhasil ditambahkan", data=svc.service_item(row))
 
 
@@ -68,10 +80,23 @@ def update_service(
     service_id: int,
     name: str = Form(...),
     is_active: str = Form("true"),
+    description: str = Form(""),
+    group: str = Form("info"),
+    sort_order: int = Form(0),
+    card_color: str = Form("#2B7DE0"),
     db: Session = Depends(get_db),
     _user: User = Depends(require_permission("manage_service")),
 ):
-    row = svc.update_service(db, service_id, name=name, is_active=_parse_bool(is_active))
+    row = svc.update_service(
+        db,
+        service_id,
+        name=name,
+        is_active=_parse_bool(is_active),
+        description=description,
+        group=group,
+        sort_order=sort_order,
+        card_color=card_color,
+    )
     return WebResponse(status="success", message="Layanan berhasil diperbarui", data=svc.service_item(row))
 
 

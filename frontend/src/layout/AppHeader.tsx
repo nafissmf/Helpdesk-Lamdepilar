@@ -180,7 +180,7 @@ const AppHeader: React.FC = () => {
           </button>
 
           {/* Logo mobile */}
-          <Link to="/" className="lg:hidden">
+          <Link to="/dashboard" className="lg:hidden">
             <AppLogo className="h-8 w-[120px]" />
           </Link>
 

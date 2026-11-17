@@ -20,6 +20,10 @@ export default function Services() {
   const [editing, setEditing] = useState<ServiceManageItem | null>(null);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [group, setGroup] = useState<"info" | "complaint">("info");
+  const [sortOrder, setSortOrder] = useState(0);
+  const [cardColor, setCardColor] = useState("#2B7DE0");
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -54,6 +58,10 @@ export default function Services() {
   const openCreate = () => {
     setEditing(null);
     setName("");
+    setDescription("");
+    setGroup("info");
+    setSortOrder(0);
+    setCardColor("#2B7DE0");
     setIsActive(true);
     setCategories([]);
     resetCategoryForm();
@@ -63,6 +71,10 @@ export default function Services() {
   const openEdit = (item: ServiceManageItem) => {
     setEditing(item);
     setName(item.name);
+    setDescription(item.description || "");
+    setGroup(item.group === "complaint" ? "complaint" : "info");
+    setSortOrder(item.sort_order ?? 0);
+    setCardColor(item.card_color || "#2B7DE0");
     setIsActive(item.is_active);
     setCategories(toDrafts(item.categories));
     resetCategoryForm();
@@ -128,6 +140,10 @@ export default function Services() {
     setSaving(true);
     const form = new FormData();
     form.set("name", name.trim());
+    form.set("description", description.trim());
+    form.set("group", group);
+    form.set("sort_order", String(sortOrder || 0));
+    form.set("card_color", cardColor || "#2B7DE0");
     form.set("is_active", isActive ? "true" : "false");
 
     const isCreate = !editing;
@@ -270,7 +286,12 @@ export default function Services() {
                     {item.is_active ? t("serviceActive").split(" ")[0] : t("serviceInactive")}
                   </span>
                 </div>
+                {item.description ? (
+                  <p className="mb-2 line-clamp-2 text-xs text-gray-500">{item.description}</p>
+                ) : null}
                 <p className="text-xs text-gray-500">
+                  {item.group === "complaint" ? t("serviceGroupComplaint") : t("serviceGroupInfo")}
+                  {" · "}
                   {item.categories.length} {t("categoriesForService").toLowerCase()}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -318,6 +339,47 @@ export default function Services() {
                   className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-950"
                 />
               </label>
+              <label className="block space-y-1.5 text-sm">
+                <span className="font-medium text-gray-700 dark:text-gray-200">{t("serviceDescription")}</span>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  placeholder={t("serviceDescriptionPlaceholder")}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950"
+                />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="block space-y-1.5 text-sm">
+                  <span className="font-medium text-gray-700 dark:text-gray-200">{t("serviceGroup")}</span>
+                  <select
+                    value={group}
+                    onChange={(e) => setGroup(e.target.value === "complaint" ? "complaint" : "info")}
+                    className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-950"
+                  >
+                    <option value="info">{t("serviceGroupInfo")}</option>
+                    <option value="complaint">{t("serviceGroupComplaint")}</option>
+                  </select>
+                </label>
+                <label className="block space-y-1.5 text-sm">
+                  <span className="font-medium text-gray-700 dark:text-gray-200">{t("serviceSortOrder")}</span>
+                  <input
+                    type="number"
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
+                    className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm dark:border-gray-700 dark:bg-gray-950"
+                  />
+                </label>
+                <label className="block space-y-1.5 text-sm">
+                  <span className="font-medium text-gray-700 dark:text-gray-200">{t("serviceCardColor")}</span>
+                  <input
+                    type="color"
+                    value={cardColor}
+                    onChange={(e) => setCardColor(e.target.value)}
+                    className="h-11 w-full cursor-pointer rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700"
+                  />
+                </label>
+              </div>
               <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
                 <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
                 <span>{t("serviceActive")}</span>

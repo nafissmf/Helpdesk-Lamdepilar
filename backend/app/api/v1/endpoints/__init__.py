@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     role_scopes,
     dashboard,
     helpdesk,
+    public_helpdesk,
 )
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     "role_scopes",
     "dashboard",
     "helpdesk",
+    "public_helpdesk",
 ]

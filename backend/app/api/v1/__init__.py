@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     role_scopes,
     dashboard,
     helpdesk,
+    public_helpdesk,
 )
 from app.core.dependencies import get_current_active_user
 
@@ -59,6 +60,8 @@ api_router.include_router(
     tags=["Helpdesk"],
     dependencies=_auth_required,
 )
+# Public catalog / guest ticket / track — no session required
+api_router.include_router(public_helpdesk.router)
 api_router.include_router(settings.router, prefix="/settings", tags=["Settings"])
 
 # Media: public file serve + protected CRUD

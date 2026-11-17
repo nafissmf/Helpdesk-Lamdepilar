@@ -1039,11 +1039,16 @@ def build_report_xlsx(data: dict) -> bytes:
     return buf.getvalue()
 
 
+GUEST_ROLE_NAME = "UPPS/Universitas"
+VALID_SERVICE_GROUPS = {"info", "complaint"}
+
+
 def search_services(db: Session, q: str | None) -> list[Service]:
     query = db.query(Service).filter(Service.is_active.is_(True))
     if q:
-        query = query.filter(Service.name.ilike(f"%{q.strip()}%"))
-    return query.order_by(Service.name.asc()).all()
+        like = f"%{q.strip()}%"
+        query = query.filter((Service.name.ilike(like)) | (Service.description.ilike(like)))
+    return query.order_by(Service.sort_order.asc(), Service.name.asc()).all()
 
 
 def search_categories(db: Session, service_id: int, q: str | None) -> list[Category]:
@@ -1053,11 +1058,22 @@ def search_categories(db: Session, service_id: int, q: str | None) -> list[Categ
     return query.order_by(Category.name.asc()).all()
 
 
+def _normalize_service_group(group: str | None) -> str:
+    value = (group or "info").strip().lower()
+    if value not in VALID_SERVICE_GROUPS:
+        raise BadRequestException("Group layanan harus info atau complaint")
+    return value
+
+
 def service_item(service: Service) -> dict:
     categories = sorted(service.categories or [], key=lambda row: (row.name or "").lower())
     return {
         "id": service.id,
         "name": service.name,
+        "description": service.description,
+        "group": service.group or "info",
+        "sort_order": int(service.sort_order or 0),
+        "card_color": service.card_color or "#2B7DE0",
         "is_active": bool(service.is_active),
         "categories": [
             {
@@ -1071,11 +1087,18 @@ def service_item(service: Service) -> dict:
     }
 
 
+def public_service_item(service: Service) -> dict:
+    item = service_item(service)
+    item.pop("is_active", None)
+    return item
+
+
 def list_services_manage(db: Session, q: str | None = None) -> list[Service]:
     query = db.query(Service).options(joinedload(Service.categories))
     if q:
-        query = query.filter(Service.name.ilike(f"%{q.strip()}%"))
-    return query.order_by(Service.name.asc()).all()
+        like = f"%{q.strip()}%"
+        query = query.filter((Service.name.ilike(like)) | (Service.description.ilike(like)))
+    return query.order_by(Service.sort_order.asc(), Service.name.asc()).all()
 
 
 def get_service_or_404(db: Session, service_id: int) -> Service:
@@ -1090,14 +1113,30 @@ def get_service_or_404(db: Session, service_id: int) -> Service:
     return row
 
 
-def create_service(db: Session, *, name: str, is_active: bool = True) -> Service:
+def create_service(
+    db: Session,
+    *,
+    name: str,
+    is_active: bool = True,
+    description: str | None = None,
+    group: str = "info",
+    sort_order: int = 0,
+    card_color: str = "#2B7DE0",
+) -> Service:
     clean = (name or "").strip()
     if not clean:
         raise BadRequestException("Nama layanan wajib diisi")
     exists = db.query(Service).filter(Service.name == clean).first()
     if exists:
         raise BadRequestException("Nama layanan sudah digunakan")
-    row = Service(name=clean, is_active=is_active)
+    row = Service(
+        name=clean,
+        is_active=is_active,
+        description=(description or "").strip() or None,
+        group=_normalize_service_group(group),
+        sort_order=int(sort_order or 0),
+        card_color=(card_color or "#2B7DE0").strip()[:32] or "#2B7DE0",
+    )
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -1110,6 +1149,10 @@ def update_service(
     *,
     name: str,
     is_active: bool,
+    description: str | None = None,
+    group: str = "info",
+    sort_order: int = 0,
+    card_color: str = "#2B7DE0",
 ) -> Service:
     row = get_service_or_404(db, service_id)
     clean = (name or "").strip()
@@ -1124,8 +1167,180 @@ def update_service(
         raise BadRequestException("Nama layanan sudah digunakan")
     row.name = clean
     row.is_active = is_active
+    row.description = (description or "").strip() or None
+    row.group = _normalize_service_group(group)
+    row.sort_order = int(sort_order or 0)
+    row.card_color = (card_color or "#2B7DE0").strip()[:32] or "#2B7DE0"
     db.commit()
     return get_service_or_404(db, service_id)
+
+
+def _split_guest_name(full_name: str) -> tuple[str, str]:
+    parts = [p for p in (full_name or "").strip().split() if p]
+    if not parts:
+        return "Tamu", "Helpdesk"
+    if len(parts) == 1:
+        return parts[0][:255], "—"
+    return parts[0][:255], " ".join(parts[1:])[:255]
+
+
+def _unique_guest_username(db: Session, email: str) -> str:
+    local = re.sub(r"[^a-zA-Z0-9._-]", "", (email.split("@")[0] or "guest").lower())[:40] or "guest"
+    candidate = local
+    n = 1
+    while db.query(User).filter(User.username == candidate).first():
+        n += 1
+        candidate = f"{local}{n}"
+    return candidate
+
+
+def _format_guest_institution(university: str | None, study_program: str | None) -> str | None:
+    univ = (university or "").strip()
+    prodi = (study_program or "").strip()
+    if univ and prodi:
+        return f"{univ} — {prodi}"[:255]
+    if univ:
+        return univ[:255]
+    if prodi:
+        return prodi[:255]
+    return None
+
+
+def find_or_create_guest_user(
+    db: Session,
+    *,
+    name: str,
+    email: str,
+    phone: str | None = None,
+    institution: str | None = None,
+) -> User:
+    from app.core.security import get_password_hash
+
+    clean_email = (email or "").strip().lower()
+    if not clean_email or "@" not in clean_email:
+        raise BadRequestException("Email tidak valid")
+    firstname, lastname = _split_guest_name(name)
+    phone_clean = (phone or "").strip()[:255] or None
+    institution_clean = (institution or "").strip()[:255] or None
+
+    user = db.query(User).filter(User.email == clean_email).first()
+    if user:
+        if getattr(user, "deleted_at", None) is not None:
+            user.deleted_at = None
+        if firstname and (not user.firstname or user.firstname in {"Tamu", "Guest"}):
+            user.firstname = firstname
+            user.lastname = lastname
+        if phone_clean and not user.phone_number:
+            user.phone_number = phone_clean
+        if institution_clean:
+            user.institution = institution_clean
+        db.add(user)
+        db.flush()
+        return user
+
+    user = User(
+        username=_unique_guest_username(db, clean_email),
+        email=clean_email,
+        firstname=firstname,
+        lastname=lastname,
+        phone_number=phone_clean,
+        institution=institution_clean,
+        password=get_password_hash(uuid.uuid4().hex + uuid.uuid4().hex),
+    )
+    role = db.query(Role).filter(Role.name == GUEST_ROLE_NAME).first()
+    if role:
+        user.roles = [role]
+    db.add(user)
+    db.flush()
+    return user
+
+
+def create_guest_ticket(
+    db: Session,
+    user: User,
+    *,
+    title: str,
+    service_id: int,
+    category_id: int,
+    description: str,
+    study_program: str | None = None,
+) -> Ticket:
+    clean_title = (title or "").strip()
+    if not clean_title:
+        raise BadRequestException("Judul wajib diisi")
+    service = db.query(Service).filter(Service.id == service_id, Service.is_active.is_(True)).first()
+    if not service:
+        raise BadRequestException("Layanan tidak ditemukan")
+    category = (
+        db.query(Category)
+        .filter(Category.id == category_id, Category.service_id == service_id)
+        .first()
+    )
+    if not category:
+        raise BadRequestException("Kategori masalah tidak sesuai dengan layanan")
+    ticket = Ticket(
+        uuid=str(uuid.uuid4()),
+        title=clean_title[:255],
+        description=validate_description(db, description),
+        study_program=((study_program or "").strip() or None),
+        service_id=service_id,
+        category_id=category_id,
+        staff_priority=False,
+        status="open",
+        requester_id=user.id,
+    )
+    db.add(ticket)
+    db.flush()
+    notify_permission(
+        db,
+        "reply_ticket",
+        "ticket.created",
+        {"ticket_id": ticket.uuid, "title": ticket.title},
+        exclude_user_id=user.id,
+    )
+    return ticket
+
+
+def track_guest_ticket(db: Session, *, code: str, email: str) -> Ticket:
+    clean_code = (code or "").strip()
+    clean_email = (email or "").strip().lower()
+    if not clean_code or not clean_email:
+        raise BadRequestException("Kode pelacakan dan email wajib diisi")
+    ticket = (
+        _ticket_query(db)
+        .join(User, User.id == Ticket.requester_id)
+        .filter(Ticket.uuid == clean_code, User.email == clean_email)
+        .first()
+    )
+    if not ticket:
+        raise NotFoundException("Tiket tidak ditemukan. Periksa kode dan email Anda.")
+    return ticket
+
+
+def add_guest_reply(db: Session, *, code: str, email: str, body: str) -> tuple[Ticket, TicketReply]:
+    """Guest reply verified by tracking code + requester email (no login session)."""
+    ticket = track_guest_ticket(db, code=code, email=email)
+    if ticket.status == "resolved":
+        raise BadRequestException("Tiket sudah diselesaikan; tidak dapat membalas.")
+    requester = ticket.requester
+    if not requester:
+        raise NotFoundException("Pemohon tiket tidak ditemukan")
+    reply = add_reply(db, requester, ticket, body)
+    db.flush()
+    return ticket, reply
+
+
+def public_stats(db: Session) -> dict:
+    total = db.query(Ticket).count()
+    open_count = db.query(Ticket).filter(Ticket.status == "open").count()
+    in_progress = db.query(Ticket).filter(Ticket.status == "in_progress").count()
+    resolved = db.query(Ticket).filter(Ticket.status == "resolved").count()
+    return {
+        "total": total,
+        "open": open_count,
+        "in_progress": in_progress,
+        "resolved": resolved,
+    }
 
 
 def delete_service(db: Session, service_id: int) -> None:

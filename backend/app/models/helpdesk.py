@@ -20,6 +20,11 @@ class Service(Base, TimestampMixin):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     name = Column(String(255), unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+    # info = permintaan informasi/layanan; complaint = pengaduan (landing publik)
+    group = Column(String(32), nullable=False, default="info")
+    sort_order = Column(Integer, nullable=False, default=0)
+    card_color = Column(String(32), nullable=False, default="#2B7DE0")
     is_active = Column(Boolean, nullable=False, default=True)
 
     categories = relationship("Category", back_populates="service", cascade="all, delete-orphan")

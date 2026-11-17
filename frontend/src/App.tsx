@@ -4,6 +4,7 @@ import ModernAuth from "./pages/AuthPages/ModernAuth";
 import NotFound from "./pages/OtherPage/NotFound";
 import UserProfiles from "./pages/UserProfiles";
 import AppLayout from "./layout/AppLayout";
+import PublicLayout from "./layout/PublicLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import Home from "./pages/Dashboard/Home";
@@ -24,6 +25,14 @@ import EditRole from "./pages/Roles/EditRole";
 import Settings from "./pages/Settings/Settings";
 import Units from "./pages/Units/Units";
 import RoleScopes from "./pages/RoleScopes/RoleScopes";
+import PublicLanding from "./pages/Public/Landing";
+import PublicAjukanTiket from "./pages/Public/AjukanTiket";
+import PublicLacakTiket from "./pages/Public/LacakTiket";
+import PublicPengetahuan from "./pages/Public/Pengetahuan";
+import PublicPengetahuanDetail from "./pages/Public/PengetahuanDetail";
+import PublicPanduan from "./pages/Public/Panduan";
+import PublicPanduanDetail from "./pages/Public/PanduanDetail";
+import PublicMonitoring from "./pages/Public/Monitoring";
 
 export default function App() {
   return (
@@ -32,15 +41,18 @@ export default function App() {
         <AuthNavigationBridge />
         <ScrollToTop />
         <Routes>
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<PublicLanding />} />
+            <Route path="/ajukan" element={<PublicAjukanTiket />} />
+            <Route path="/lacak-tiket" element={<PublicLacakTiket />} />
+            <Route path="/pengetahuan" element={<PublicPengetahuan />} />
+            <Route path="/pengetahuan/:id" element={<PublicPengetahuanDetail />} />
+            <Route path="/panduan" element={<PublicPanduan />} />
+            <Route path="/panduan/:slug" element={<PublicPanduanDetail />} />
+            <Route path="/monitoring" element={<PublicMonitoring />} />
+          </Route>
+
           <Route element={<AppLayout />}>
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute requiredPermission="view_dashboard">
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
             <Route
               path="/dashboard"
               element={
